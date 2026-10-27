@@ -1,5 +1,5 @@
 <?php
-    require __DIR__ . '/../Database.php';
+    require_once __DIR__ . '/../Database.php';
 
     $allowedPages = ['enquiry', 'entries'];
     $page = isset($_GET['page']) ? trim($_GET['page']) : 'enquiry';

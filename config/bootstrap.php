@@ -30,7 +30,6 @@
     }
 
     loadEnv(__DIR__ . '/.env');
-    require BASE_PATH . '/Database.php';
 
     function ecryptData($data)
     {
