@@ -4,7 +4,7 @@ A small PHP + MySQL user system. Visitors fill an enquiry from a public form. Re
 
 ## Requirements
 
-- PHP 8.1+ with `pdo_mysql`, `openssl`, `mbstring`
+- PHP 8.1+ with `pdo_mysql`, `openssl`, `mbstring`, `php-mysql`, `php-fpm`
 - MySQL 8 or MariaDB 10.6+
 - Apache 2.4 (or Nginx + PHP-FPM)
 - **HTTPS in production.** The browser uses the Web Crypto API, which only runs on HTTPS or `http://localhost`. On plain HTTP the forms show "Secure connection required".
@@ -54,6 +54,12 @@ mysql -u root -p < database/5_seeder.sql
 The app user gets `SELECT, INSERT, UPDATE` on `users` and `user_logs` only. Archiving is a soft delete (`deleted_at`), so `DELETE` is never needed.
 
 Seeded rows carry pre-made ID hashes. They display fine, but because the original IDs aren't known they can't be matched by the duplicate-ID check. New enquiries are hashed with `hashIdNumber()` using your `APP_KEY`.
+
+
+### 4. Serve App
+``` bash
+php -S localhost:8080 -t public
+```
 
 
 # @TODO

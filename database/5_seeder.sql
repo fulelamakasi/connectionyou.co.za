@@ -1,13 +1,13 @@
-use connectionyou;
+use `connectionyou`;
 
-INSERT INTO users (`name`,`first_name`, `last_name`,  `email`, `id_number_hash`, `phone_number`, `message`, `is_active`) VALUES
+INSERT INTO `connectionyou`.`users` (`name`,`first_name`, `last_name`,  `email`, `id_number_hash`, `phone_number`, `message`, `is_active`) VALUES
     ('Thandiwe Nkosi','Thandiwe', 'Nkosi', 'thandiwe.nkosi@example.com', 'b89c2641c604dc5ca3d23483110f6de20b0e750550c6f306d39a2ce897242827', '+27821234567', 'Hi, I''d like a quote for a booking system for our guesthouse in Clarens. We have six rooms and want online payments.', 1),
     ('Pieter van Zyl', 'Pieter', 'van Zyl', 'pieter.vdm@example.org', '9be8b47e041788f2d6ffef797cc1e06b15d551b2a7cddba91a8642475c4c01ae', '+27114567890', 'Our Laravel site keeps timing out during month-end. Can someone take a look at the server setup?', 1),
     ('Ayesha Patel', 'Ayesha', 'Patel', 'ayesha.patel@example.net', 'f43668f2fa6d81484d16714637a44efed0563321915f0218f552c00da20ca924', '+27731239876', 'Do you build mobile apps as well, or only web? We need something for field technicians that works offline.', 1),
     ('Sipho Dlamini', 'Sipho', 'Dlamini', 'sipho.dlamini@example.com', '575a5929850d252773a0918e7f00a7fe5a2b93a13efd0741386e4a9f05713253', '+27605550123', 'Following up on my call last week about integrating our payroll export with the accounting package. Please send the proposal when ready.', 1),
     ('Lerato Mokoena', 'Lerato', 'Mokoena', 'lerato.m@example.org', 'e7682ff060d58e8d3d749839f2a3faf1a0b63d8bb894bc0729b339c9ba853912', '+27849876543', 'I''m a final-year IT student at Wits looking for a vacation internship in December. Is there an application process?', 1),
     ('Johan Botha', 'Johan', 'Botha', 'johan.botha@example.net', 'a06feae043d719da70013fde6f1d31b5e2de95f6067d3c3d695385d31d2147a1', '+27215551234', 'We need to migrate an old Access database to something web-based. Roughly 40 users across two branches.', 1),
-    ('Nomvula Zulu', 'Nomvula', 'Zulu', 'nomvula.zulu@example.com', 'bf4ed9ee33a270c5807888d9364cfdfe951947690c21a90e9142c2c91484d5fc', '+27766543210', 'Please call me back regarding the school fees portal. Parents can''t reset their passwords.', NULL, NULL, 1),
+    ('Nomvula Zulu', 'Nomvula', 'Zulu', 'nomvula.zulu@example.com', 'bf4ed9ee33a270c5807888d9364cfdfe951947690c21a90e9142c2c91484d5fc', '+27766543210', 'Please call me back regarding the school fees portal. Parents can''t reset their passwords.', 1),
     ('Kagiso Molefe', 'Kagiso', 'Molefe', 'kagiso.molefe@example.org', 'a08e3a552390958aae2fd295f939ee8c3209cb0909b565273904c38b051ae6ba', '+27832221111', 'Interested in a maintenance retainer for three WordPress sites. What does a monthly package include?', 0),
     ('Zanele Khumalo', 'Zanele', 'Khumalo', 'zanele.k@example.net', '5bcd5bfc7ebb959cc51a7d9ef682641da9d4f7c9c0aef5de500c9b1121a6fb8f', '+27315559876', 'Can your system send WhatsApp reminders for appointments? We run a physio practice in Umhlanga.', 0),
     ('Riaan Pretorius', 'Riaan', 'Pretorius', 'riaan.p@example.com', '21f863b9839d9b49e91a0f30df0db422755e8c3fb39be0531938dcc210830d24', '+27711112222', 'Short question: do you host in South Africa? Our client data must stay in-country for POPIA reasons.', 1),
