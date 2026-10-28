@@ -1,5 +1,5 @@
 <?php
-    require __DIR__ . '/../Database.php';
+    require_once __DIR__ . '/../Database.php';
 
     $allowedPages = ['enquiry', 'entries'];
     $page = isset($_GET['page']) ? trim($_GET['page']) : 'enquiry';
@@ -42,6 +42,7 @@
 <?php if ($page === 'enquiry') { ?>
     <header class="site-header">
         <a class="brand" href="index.php"><?= e($appName) ?></a>
+        <a class="link-quiet" href="index.php?page=entries">View entries</a>
     </header>
 
     <main class="enquiry">
@@ -82,7 +83,7 @@
 
                 <div class="field">
                     <label for="id_number">South African ID number</label>
-                    <input id="id_number" name="id_number" type="text" inputmode="numeric" maxlength="13" autocomplete="off" required>
+                    <input id="id_number" name="id_number" type="text" inputmode="numeric" maxlength="13" autocomplete="off">
                     <p class="field-hint">13 digits. Stored as a one-way hash.</p>
                     <p class="field-error" data-error-for="id_number"></p>
                 </div>

@@ -1,5 +1,5 @@
 <?php
-    require __DIR__ . '/../Database.php';
+    require_once __DIR__ . '/../Database.php';
     header('Content-Type: text/plain');
 
     $clean_post = [];
@@ -13,7 +13,7 @@
         exit;
     }
 
-    $decryptedArray = decryptData($clean_post['ciphertext'], ['iv']);
+    $decryptedArray = decryptData($clean_post['ciphertext'], $clean_post['iv']);
 
     if (!is_array($decryptedArray)) {
         echo json_encode(['code' => 400, 'heading' => 'Invalid Request', 'message' => 'Request data could not be read.']);
@@ -45,7 +45,7 @@
         $message = trim($decryptedArray['message'] ?? '');
         $email = trim($decryptedArray['email'] ?? '');
 
-        $checks = performGenericChecks($first_name, $last_name, $name, $phone_number, $validateSAIDNumber, $email, $message);
+        $checks = performGenericChecks($first_name, $last_name, $name, $phone_number, $email, $message, $validateSAIDNumber);
 
         if (!empty($checks)) {
             echo $checks;
@@ -82,7 +82,8 @@
         $userArray = getUserById($user_id);
 
         if (!$userArray) {
-            return json_encode(['code' => 304, 'heading' => 'User Not Found', 'message' => "Invalid User Id."]);
+            echo json_encode(['code' => 304, 'heading' => 'User Not Found', 'message' => "Invalid User Id."]);
+            exit;
         }
 
         $updatedUser = setUserUnArchived($user_id, $edited_by);
@@ -110,7 +111,8 @@
         $userArray = getUserById($user_id);
 
         if (!$userArray) {
-            return json_encode(['code' => 304, 'heading' => 'User Not Found', 'message' => "Invalid User Id."]);
+            echo json_encode(['code' => 304, 'heading' => 'User Not Found', 'message' => "Invalid User Id."]);
+            exit;
         }
 
         $updatedUser = setUserArchived($user_id, $edited_by);
@@ -145,7 +147,8 @@
         $userArray = getUserById($user_id);
 
         if (!$userArray) {
-            return json_encode(['code' => 304, 'heading' => 'User Not Found', 'message' => "Invalid User Id."]);
+            echo json_encode(['code' => 304, 'heading' => 'User Not Found', 'message' => "Invalid User Id."]);
+            exit;
         }
 
         $updatedUser = setUserStatus($user_id, $is_active, $edited_by);
@@ -178,7 +181,7 @@
         $email = trim($decryptedArray['email'] ?? '');
         $user_id = (int)($decryptedArray['user_id'] ?? 0);
 
-        $updateChecks = performUpdateChecks($user_id, $first_name, $last_name, $name, $phone_number, $id_number_hash, $email, $message);
+        $updateChecks = performUpdateChecks($user_id, $first_name, $last_name, $name, $phone_number, $id_number, $email, $message);
 
         if (!empty($updateChecks)) {
             echo $updateChecks;
@@ -205,21 +208,21 @@
         exit;
     }
 
-    function performGenericChecks($first_name, $last_name, $name, $phone_number, $validateSAIDNumber, $email, $message)
+    function performGenericChecks($first_name, $last_name, $name, $phone_number, $email, $message, $validateSAIDNumber = '')
     {
-        $nullChecks = performNullChecks($first_name, $last_name, $name, $phone_number, $validateSAIDNumber, $email, $message);
+        $nullChecks = performNullChecks($first_name, $last_name, $name, $phone_number, $email, $message);
 
         if (!empty($nullChecks)) {
             return $nullChecks;
         }
 
-        $validations = performValidations($phone_number, $validateSAIDNumber, $email);
+        $validations = performValidations($phone_number, $email, $validateSAIDNumber);
 
         if (!empty($validations)) {
             return $validations;
         }
 
-        $recordExists = performChecksRecordsExists($phone_number, $validateSAIDNumber, $email);
+        $recordExists = performChecksRecordsExists($phone_number, $email, $validateSAIDNumber);
 
         if (!empty($recordExists)) {
             return $validations;
@@ -248,7 +251,7 @@
         }
 
         $idForNullCheck = $validateSAIDNumber !== '' ? $validateSAIDNumber : $userArray[0]['id_number_hash'];
-        $nullChecks = performNullChecks($first_name, $last_name, $name, $phone_number, $idForNullCheck, $email, $message);
+        $nullChecks = performNullChecks($first_name, $last_name, $name, $phone_number, $email, $message, $idForNullCheck);
 
         if (!empty($nullChecks)) {
             return $nullChecks;
@@ -283,7 +286,7 @@
         return [];
     }
 
-    function performNullChecks($first_name, $last_name, $name, $phone_number, $validateSAIDNumber, $email, $message)
+    function performNullChecks($first_name, $last_name, $name, $phone_number, $email, $message)
     {
         if (empty($first_name) || $first_name == "") {
             return json_encode(['code' => 400, 'heading' => 'Invalid Request', 'message' => "First Name is required and can not be NULL."]);
@@ -301,10 +304,6 @@
             return json_encode(['code' => 400, 'heading' => 'Invalid Request', 'message' => "Phone Number is required and can not be NULL."]);
         }
 
-        if (empty($validateSAIDNumber) || $validateSAIDNumber == "") {
-            return json_encode(['code' => 400, 'heading' => 'Invalid Request', 'message' => "ID Number is required and can not be NULL."]);
-        }
-
         if (empty($email) || $email == "") {
             return json_encode(['code' => 400, 'heading' => 'Invalid Request', 'message' => "Email is required and can not be NULL."]);
         }
@@ -316,7 +315,7 @@
         return [];
     }
 
-    function performValidations($phone_number, $validateSAIDNumber, $email)
+    function performValidations($phone_number, $email, $validateSAIDNumber = '')
     {
         if (!validateSAMobile($phone_number)) {
             return json_encode(['code' => 400, 'heading' => 'Mobile Number is Not Valid', 'message' => "Phone Number (". $phone_number .") is not a valid SA Mobile Number"]);
@@ -326,14 +325,16 @@
             return json_encode(['code' => 400, 'heading' => 'Email is Not Valid', 'message' => "Email (". $email .") is not a valid email address"]);
         }
 
-        if (!validateSAIDNumber($validateSAIDNumber)) {
-            return json_encode(['code' => 400, 'heading' => 'ID Number is Not Valid', 'message' => "Provided identity number is not a valid SA ID Number"]);
+        if ($validateSAIDNumber != '') {
+            if (!validateSAIDNumber($validateSAIDNumber)) {
+                return json_encode(['code' => 400, 'heading' => 'ID Number is Not Valid', 'message' => "Provided identity number is not a valid SA ID Number"]);
+            }
         }
 
         return [];
     }
 
-    function performChecksRecordsExists($phone_number, $validateSAIDNumber, $email)
+    function performChecksRecordsExists($phone_number, $email, $validateSAIDNumber = '')
     {
         if (getUserByPhoneNumber($phone_number, 1)) {
             return json_encode(['code' => 204, 'heading' => 'Mobile Number Exists', 'message' => "Phone Number (". $phone_number .") is  already registered please try a different."]);
@@ -343,8 +344,10 @@
             return json_encode(['code' => 204, 'heading' => 'Email Exists', 'message' => "Email (". $email .") is already registered please try a different  email address"]);
         }
 
-        if (getUserByIdNumber(hashIdNumber($validateSAIDNumber), 1)) {
-            return json_encode(['code' => 204, 'heading' => 'ID Number Exists', 'message' => "Provided identity number is already registered please try a different ID"]);
+        if ($validateSAIDNumber != '') {
+            if (getUserByIdNumber(hashIdNumber($validateSAIDNumber), 1)) {
+                return json_encode(['code' => 204, 'heading' => 'ID Number Exists', 'message' => "Provided identity number is already registered please try a different ID"]);
+            }
         }
 
         return [];

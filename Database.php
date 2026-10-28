@@ -21,7 +21,7 @@
         $pdo = new PDO($dsn, $dbUser, $dbPass, $options);
     } catch (\PDOException $e) {
         error_log("Database connection failed: " . $e->getMessage());
-        exit("Database connection failed. Please try again later.");
+        exit("Database connection failed. Please try again later.".  $e->getMessage());
     }
 
     function getSelectQuery($whereClause, $whereClauseColumn = '', $whereClauseValue = '', $limit = 1000)
