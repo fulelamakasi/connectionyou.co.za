@@ -22,6 +22,7 @@ git clone https://github.com/fulelamakasi/connectionyou.co.za.git
 #or SSH
 git clone git@github.com:fulelamakasi/connectionyou.co.za.git
 ```
+#Current Application tag release/2.0.0
 
 ### 2. Environment
 
@@ -38,6 +39,8 @@ php -r 'echo "base64:".base64_encode(random_bytes(32)), PHP_EOL;'
 # ENCRYPTION_KEY – must be exactly 32 characters (AES-256 key).
 php -r 'echo bin2hex(random_bytes(16)), PHP_EOL;'
 ```
+
+Copy and paste the output to .env APP_KEY & ENCRYPTION_KEY
 
 ### 3. Database
 
@@ -61,7 +64,19 @@ Seeded rows carry pre-made ID hashes. They display fine, but because the origina
 php -S localhost:8080 -t public
 ```
 
+### 5. Public Endpoints
+1. View Available Endpoints
+http://localhost:8080/getRestFulResponse.php?type=
+2. View Endpoint Response data
+http://localhost:8080/getRestFulResponse.php?type=getTestQueryTypes
+3. View Encrypted Response
+http://localhost:8080/getRestFulResponse.php?type=getAllUsers
+
+### 6. View application on web browser
+You can now start testing the application
+
+
 
 # @TODO
-Consider DOCKER for deployment, currently set for apache/nginx
+Consider DOCKER for deployment
 
