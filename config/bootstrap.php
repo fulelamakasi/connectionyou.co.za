@@ -74,36 +74,43 @@
         return filter_var(trim($email), FILTER_VALIDATE_EMAIL);
     }
 
-    function validateSAIDNumber($id_number_hash) 
+    function validateSAIDNumber($idNumber)
     {
-        $id_number_hash = trim($id_number_hash);
+        $idNumber = trim((string)$idNumber);
 
-        if (!preg_match('/^\d{13}$/', $id_number_hash)) {
+        if (!preg_match('/^\d{13}$/', $idNumber)) {
             return false;
         }
 
-        $year  = substr($id_number_hash, 0, 2);
-        $month = substr($id_number_hash, 2, 2);
-        $day   = substr($id_number_hash, 4, 2);
+        $yy    = (int)substr($idNumber, 0, 2);
+        $month = (int)substr($idNumber, 2, 2);
+        $day   = (int)substr($idNumber, 4, 2);
 
-        $fullYear = (int)$year <= 29 ? '20' . $year : '19' . $year;
+        // Resolve century: if YY is after the current year's YY, it's 1900s
+        $currentYY = (int)date('y');
+        $fullYear  = ($yy <= $currentYY) ? 2000 + $yy : 1900 + $yy;
 
-        if (!checkdate((int)$month, (int)$day, (int)$fullYear)) {
+        if (!checkdate($month, $day, $fullYear)) {
             return false;
         }
 
-        $citizenship = (int)$id_number_hash[10];
-        if ($citizenship !== 0 && $citizenship !== 1) {
+        // Reject future birthdates
+        if (mktime(0, 0, 0, $month, $day, $fullYear) > time()) {
             return false;
         }
 
+        // Citizenship: 0 = SA citizen, 1 = permanent resident, 2 = refugee
+        $citizenship = (int)$idNumber[10];
+        if (!in_array($citizenship, [0, 1, 2], true)) {
+            return false;
+        }
+
+        // Luhn checksum — double every second digit from the right,
+        // excluding the check digit (i.e. odd indices for a 13-digit number)
         $sum = 0;
-        $length = strlen($id_number_hash);
-        
-        for ($i = 0; $i < $length; $i++) {
-            $digit = (int)$id_number_hash[$i];
-
-            if (($i % 2) !== ($length % 2)) {
+        for ($i = 0; $i < 13; $i++) {
+            $digit = (int)$idNumber[$i];
+            if ($i % 2 === 1) {
                 $digit *= 2;
                 if ($digit > 9) {
                     $digit -= 9;
@@ -112,7 +119,7 @@
             $sum += $digit;
         }
 
-        return ($sum % 10 === 0);
+        return $sum % 10 === 0;
     }
 
     function hashIdNumber($id_number)

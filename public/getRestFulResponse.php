@@ -50,25 +50,25 @@
 
     switch($type){
         case 'userByEmail':
-            $users = getUserByEmail(escapeString($value), $limit);
+            $users = getUserByEmail($value, $limit);
             break;
         case 'usersByFirstName':
-            $users = getUserByFirstName(escapeString($value), $limit);
+            $users = getUserByFirstName($value, $limit);
             break;
         case 'usersByLastName':
-            $users = getUserByLastName(escapeString($value), $limit);
+            $users = getUserByLastName($value, $limit);
             break;
         case 'userByName':
-            $users = getUserByName(escapeString($value), $limit);
+            $users = getUserByName($value, $limit);
             break;
         case 'userByPhoneNumber':
-            $users = getUserByPhoneNumber(escapeString($value), $limit);
+            $users = getUserByPhoneNumber($value, $limit);
             break;
         case 'getActive':
-            $users = getActiveUsers(escapeString($value), $limit);
+            $users = getActiveUsers($value, $limit);
             break;
         case 'getAllUsersByDate':
-            $users = getUsersByCreatedAt(escapeString($value), $limit);
+            $users = getUsersByCreatedAt($value, $limit);
             break;
         case 'getAllUsers':
             $users = getAllUsers($limit);
@@ -92,7 +92,8 @@
                         'name' => $user['name'], 'phone_number' => $user['phone_number'],
                         'message' => $user['message'], 'is_active' => $user['is_active'],
                         'created_at' => $user['created_at'], 'updated_at' => $user['updated_at'],
-                        'editedby' => $user['editedby'], 'id_number_hash' => $user['id_number_hash'],];
+                        'editedby' => $user['editedby'], 'id_number_hash' => $user['id_number_hash'],
+                        'deleted_at' => $user['deleted_at'],];
     }
 
     echo json_encode(['data' => ecryptData(array_values($data)), 'message' => '', 'code' => '200']);
@@ -128,11 +129,4 @@
             ];
     }
 
-    function escapeString($string)
-    {
-        $encoded = htmlspecialchars($string ?? '', ENT_COMPAT, 'iso-8859-1');
-        $return = mysqli_real_escape_string($dbconntouse, $encoded);
-
-        return $return;
-    }
 

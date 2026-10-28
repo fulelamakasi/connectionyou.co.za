@@ -55,7 +55,7 @@ function validateSAIDNumber(idNumber) {
     return sum % 10 === 0;
 }
 
-function validateUserFields(fields, requireIdNumber) {
+function validateUserFields(fields) {
     const errors = {};
 
     if (!fields.first_name) {
@@ -76,14 +76,6 @@ function validateUserFields(fields, requireIdNumber) {
         errors.phone_number = 'Enter a mobile number.';
     } else if (!validateSAMobile(fields.phone_number)) {
         errors.phone_number = 'Enter a South African number, like 082 123 4567.';
-    }
-
-    if (fields.id_number || requireIdNumber) {
-        if (!fields.id_number) {
-            errors.id_number = 'Enter a 13-digit ID number.';
-        } else if (!validateSAIDNumber(fields.id_number)) {
-            errors.id_number = 'This isn’t a valid South African ID number. Check the 13 digits.';
-        }
     }
 
     if (!fields.message) {
