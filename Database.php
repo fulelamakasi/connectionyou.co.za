@@ -336,11 +336,11 @@
         return $users;
     }
 
-    function setPerformUserInsert($first_name, $last_name, $name, $phone_number, $id_number_hash, $email, $message, $edited_by)
+    function setPerformUserInsert($first_name, $last_name, $name, $phone_number, $id_number_hash, $id_number_encrypted, $email, $message, $edited_by)
     {
         global $pdo;
-        $sql = "INSERT INTO `connectionyou`.`users`(`email`, `first_name`, `last_name`, `name`, `phone_number`, `id_number_hash`, `message`, `editedby`) 
-                VALUES (:email, :first_name, :last_name, :name, :phone_number, :id_number_hash, :message, :edited_by)";
+        $sql = "INSERT INTO `connectionyou`.`users`(`email`, `first_name`, `last_name`, `name`, `phone_number`, `id_number_hash`, `id_number_encrypted`, `message`, `editedby`) 
+                VALUES (:email, :first_name, :last_name, :name, :phone_number, :id_number_hash, :id_number_encrypted, :message, :edited_by)";
 
         $stmt = $pdo->prepare($sql);
 
@@ -351,6 +351,7 @@
             ':name'    => $name,
             ':phone_number' => $phone_number,
             ':id_number_hash' => $id_number_hash,
+            ':id_number_encrypted' => $id_number_encrypted,
             ':message' => $message,
             ':edited_by' => $edited_by,
         ]);
@@ -362,7 +363,7 @@
         return false;
     }
 
-    function setUpdateRecord($user_id, $first_name, $last_name, $name, $phone_number, $id_number_hash, $email, $message, $edited_by)
+    function setUpdateRecord($user_id, $first_name, $last_name, $name, $phone_number, $id_number_hash, $id_number_encrypted, $email, $message, $edited_by)
     {
         global $pdo;
         $sql = "UPDATE `connectionyou`.`users` 
@@ -373,6 +374,7 @@
                     `name` = :name,
                     `phone_number` = :phone_number,
                     `id_number_hash` = :id_number_hash,
+                    `id_number_encrypted` = :id_number_encrypted,
                     `message` = :message,
                     `updated_at` = NOW(),
                     `editedby` = :edited_by
@@ -386,6 +388,7 @@
             ':name'    => $name,
             ':phone_number' => $phone_number,
             ':id_number_hash' => $id_number_hash,
+            ':id_number_encrypted' => $id_number_encrypted,
             ':message' => $message,
             ':edited_by' => $edited_by,
             ':id'           => $user_id
@@ -472,4 +475,41 @@
         }
 
         return false;
+    }
+
+    function setUserLog($request_data, $response_data, $request_method, $response_code, $endpoint, $request_ip)
+    {
+        global $pdo;
+        $sql = "INSERT INTO `connectionyou`.`user_logs`(`request_data`, `response_data`, `request_method`, `response_code`, `endpoint`, `request_ip`) 
+                VALUES (:request_data, :response_data, :request_method, :response_code, :endpoint, :request_ip)";
+
+        $stmt = $pdo->prepare($sql);
+
+        return $stmt->execute([
+            ':request_data'   => json_encode($request_data),
+            ':response_data'  => json_encode($response_data),
+            ':request_method' => $request_method,
+            ':response_code'  => (int)$response_code,
+            ':endpoint'       => $endpoint,
+            ':request_ip'     => $request_ip,
+        ]);
+    }
+
+    function getFailedAttemptCount($endpoint, $request_ip, $minutes)
+    {
+        global $pdo;
+        $sql = "SELECT COUNT(*) AS `attempts`
+                FROM `connectionyou`.`user_logs`
+                WHERE `endpoint` = :endpoint
+                    AND `request_ip` = :request_ip
+                    AND `response_code` = 401
+                    AND `created_at` >= (NOW() - INTERVAL :minutes MINUTE)";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':endpoint', $endpoint, PDO::PARAM_STR);
+        $stmt->bindValue(':request_ip', $request_ip, PDO::PARAM_STR);
+        $stmt->bindValue(':minutes', (int)$minutes, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return (int)$stmt->fetchColumn();
     }

@@ -692,6 +692,23 @@ a:hover {
     letter-spacing: 0.02em;
 }
 
+.entry-meta dd.reveal {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+}
+
+.entry-meta dd.reveal .btn-small {
+    min-height: 28px;
+    padding: 0 0.5rem;
+}
+
+.masked {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+}
+
 .status {
     font-weight: 600;
 }

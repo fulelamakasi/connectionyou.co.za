@@ -8,6 +8,7 @@ CREATE TABLE `users` (
     `name` VARCHAR(500) NOT NULL,
     `phone_number` VARCHAR(255) NOT NULL,
     `id_number_hash` VARCHAR(64) NOT NULL,
+    `id_number_encrypted` VARCHAR(255) DEFAULT NULL,
     `message` LONGTEXT NOT NULL,
     `is_active` TINYINT(1) NOT NULL DEFAULT '1',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

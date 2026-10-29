@@ -55,7 +55,7 @@ function validateSAIDNumber(idNumber) {
     return sum % 10 === 0;
 }
 
-function validateUserFields(fields) {
+function validateUserFields(fields, isNew) {
     const errors = {};
 
     if (!fields.first_name) {
@@ -73,7 +73,9 @@ function validateUserFields(fields) {
     }
 
     if (!fields.phone_number) {
-        errors.phone_number = 'Enter a mobile number.';
+        if (isNew !== false) {
+            errors.phone_number = 'Enter a mobile number.';
+        }
     } else if (!validateSAMobile(fields.phone_number)) {
         errors.phone_number = 'Enter a South African number, like 082 123 4567.';
     }
