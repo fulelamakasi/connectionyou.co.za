@@ -29,7 +29,7 @@
         return true;
     }
 
-    loadEnv(__DIR__ . '/.env');
+    loadEnv(__DIR__ . '/../.env');
 
     function ecryptData($data)
     {
@@ -131,6 +131,77 @@
         }
 
         return hash_hmac('sha256', trim($id_number), $appKey);
+    }
+
+    function getAtRestKey()
+    {
+        $appKey = getenv('APP_KEY') ?: '';
+
+        if (strpos($appKey, 'base64:') === 0) {
+            $appKey = base64_decode(substr($appKey, 7));
+        }
+
+        if ($appKey === '' || $appKey === false) {
+            return false;
+        }
+
+        return hash_hmac('sha256', 'connectionyou:at-rest:v1', $appKey, true);
+    }
+
+    function encryptAtRest($plaintext)
+    {
+        $key = getAtRestKey();
+
+        if ($key === false || $plaintext === null || $plaintext === '') {
+            return null;
+        }
+
+        $iv = random_bytes(12);
+        $tag = '';
+        $ciphertext = openssl_encrypt((string)$plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+
+        if ($ciphertext === false) {
+            return null;
+        }
+
+        return base64_encode($iv . $tag . $ciphertext);
+    }
+
+    function decryptAtRest($encoded)
+    {
+        $key = getAtRestKey();
+
+        if ($key === false || empty($encoded)) {
+            return null;
+        }
+
+        $raw = base64_decode($encoded, true);
+
+        if ($raw === false || strlen($raw) <= 28) {
+            return null;
+        }
+
+        $iv = substr($raw, 0, 12);
+        $tag = substr($raw, 12, 16);
+        $ciphertext = substr($raw, 28);
+        $plaintext = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag);
+
+        return $plaintext === false ? null : $plaintext;
+    }
+
+    function maskPhoneNumber($phone_number)
+    {
+        $digits = preg_replace('/\D+/', '', (string)$phone_number);
+
+        if (strpos($digits, '27') === 0 && strlen($digits) === 11) {
+            $digits = '0' . substr($digits, 2);
+        }
+
+        if (strlen($digits) < 6) {
+            return str_repeat('*', strlen($digits));
+        }
+
+        return substr($digits, 0, 3) . str_repeat('*', strlen($digits) - 5) . substr($digits, -2);
     }
 
     // todo nice to have when decrypting idNumber add endpoint

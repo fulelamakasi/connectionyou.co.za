@@ -57,7 +57,7 @@
             exit;            
         }
 
-        $userInsert = setPerformUserInsert($first_name, $last_name, $name, $phone_number, hashIdNumber($validateSAIDNumber), $email, $message, $edited_by);
+        $userInsert = setPerformUserInsert($first_name, $last_name, $name, $phone_number, hashIdNumber($validateSAIDNumber), encryptAtRest($validateSAIDNumber), $email, $message, $edited_by);
 
         if (!$userInsert) {
             echo json_encode(['code' => 304, 'heading' => 'Failed to Create User', 'message' => "User creation failed please try again."]);
@@ -181,6 +181,11 @@
         $email = trim($decryptedArray['email'] ?? '');
         $user_id = (int)($decryptedArray['user_id'] ?? 0);
 
+        if ($phone_number === '') {
+            $existingUser = getUserById($user_id);
+            $phone_number = $existingUser ? $existingUser[0]['phone_number'] : '';
+        }
+
         $updateChecks = performUpdateChecks($user_id, $first_name, $last_name, $name, $phone_number, $id_number, $email, $message);
 
         if (!empty($updateChecks)) {
@@ -190,12 +195,14 @@
 
         $userArray = getUserById($user_id);
         $id_number_hash = $userArray[0]['id_number_hash'];
+        $id_number_encrypted = $userArray[0]['id_number_encrypted'] ?? null;
 
         if ($id_number !== '') {
             $id_number_hash = hashIdNumber($id_number);
+            $id_number_encrypted = encryptAtRest($id_number);
         }
 
-        $updatedUser = setUpdateRecord($user_id, $first_name, $last_name, $name, $phone_number, $id_number_hash, $email, $message, $edited_by);
+        $updatedUser = setUpdateRecord($user_id, $first_name, $last_name, $name, $phone_number, $id_number_hash, $id_number_encrypted, $email, $message, $edited_by);
 
         if (!$updatedUser) {
             echo json_encode(['code' => 304, 'heading' => 'Failed to Update User', 'message' => "User updating failed please try again."]);
@@ -225,7 +232,7 @@
         $recordExists = performChecksRecordsExists($phone_number, $email, $validateSAIDNumber);
 
         if (!empty($recordExists)) {
-            return $validations;
+            return $recordExists;
         }
 
         return [];
@@ -257,7 +264,7 @@
             return $nullChecks;
         }
 
-        $validations = performValidations($phone_number, $validateSAIDNumber, $email);
+        $validations = performValidations($phone_number, $email, $validateSAIDNumber);
 
         if (!empty($validations)) {
             return $validations;
@@ -351,4 +358,11 @@
         }
 
         return [];
+    }
+
+    function setCreateUserLog($endpoint, $request_data, $request_method, $responseCode, $response_data = [])
+    {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+
+        return setUserLog($request_data, $response_data, $request_method, $response_code, $endpoint, $ip);
     }

@@ -84,7 +84,7 @@
                 <div class="field">
                     <label for="id_number">South African ID number</label>
                     <input id="id_number" name="id_number" type="text" inputmode="numeric" maxlength="13" autocomplete="off">
-                    <p class="field-hint">13 digits. Stored as a one-way hash.</p>
+                    <p class="field-hint">13 digits. Stored encrypted.</p>
                     <p class="field-error" data-error-for="id_number"></p>
                 </div>
 
@@ -163,6 +163,22 @@
             <div class="dialog-actions">
                 <button value="cancel" class="btn btn-ghost">Cancel</button>
                 <button value="confirm" class="btn btn-primary" id="confirm-ok"></button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog class="dialog" id="reveal-dialog" aria-labelledby="reveal-title">
+        <form id="reveal-form" novalidate>
+            <h2 id="reveal-title">Enter password</h2>
+            <p id="reveal-message"></p>
+            <div class="field">
+                <label for="reveal-password">Password</label>
+                <input id="reveal-password" name="reveal_password" type="password" autocomplete="off" required>
+                <p class="field-error" id="reveal-error" aria-live="polite"></p>
+            </div>
+            <div class="dialog-actions">
+                <button type="button" class="btn btn-ghost" id="reveal-cancel">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="reveal-submit">Show</button>
             </div>
         </form>
     </dialog>

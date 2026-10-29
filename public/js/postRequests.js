@@ -44,7 +44,7 @@ function buildUserPayload(fields) {
         last_name: fields.last_name,
         name: (fields.first_name + ' ' + fields.last_name).trim(),
         email: fields.email,
-        phone_number: validateSAMobile(fields.phone_number) || fields.phone_number,
+        phone_number: fields.phone_number ? (validateSAMobile(fields.phone_number) || fields.phone_number) : '',
         id_number_hash: fields.id_number || '',
         message: fields.message
     };

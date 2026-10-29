@@ -42,6 +42,8 @@ php -r 'echo bin2hex(random_bytes(16)), PHP_EOL;'
 
 Copy and paste the output to .env APP_KEY & ENCRYPTION_KEY
 
+Add Reveal password value is will be used to show id & phone number in plaintext
+
 ### 3. Database
 
 Run the scripts in order as a MySQL admin user:
@@ -52,6 +54,7 @@ mysql -u root -p < database/2_tables.sql
 mysql -u root -p < database/3_sql_user.sql
 mysql -u root -p < database/4_permissions_privileges.sql
 mysql -u root -p < database/5_seeder.sql
+mysql -u root -p < database/6_add_id_number_encrypted.sql
 ```
 
 The app user gets `SELECT, INSERT, UPDATE` on `users` and `user_logs` only. Archiving is a soft delete (`deleted_at`), so `DELETE` is never needed.

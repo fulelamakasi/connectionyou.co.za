@@ -16,7 +16,9 @@
         searchLabel: '',
         filter: 'open',
         selectedId: null,
-        editing: false
+        editing: false,
+        revealed: {},
+        pendingReveal: null
     };
 
     const listEmpty = document.getElementById('list-empty');
@@ -108,6 +110,7 @@
     }
 
     async function refresh() {
+        state.revealed = {};
         await loadAllUsers();
         await rerunSearch();
         render();
@@ -180,8 +183,6 @@
 
         const archived = isArchived(user);
         const active = isActive(user);
-        const hash = String(user.id_number_hash || '');
-        const shortHash = hash.length > 12 ? hash.slice(0, 6) + '…' + hash.slice(-4) : hash;
         let statusText = active ? 'Active' : 'Inactive';
 
         if (archived) {
@@ -198,8 +199,8 @@
 
                 '<dl class="entry-meta">' +
                     '<div><dt>Email</dt><dd><a href="mailto:' + escapeHtml(user.email) + '">' + escapeHtml(user.email) + '</a></dd></div>' +
-                    '<div><dt>Mobile</dt><dd><a href="tel:' + escapeHtml(user.phone_number) + '">' + escapeHtml(formatPhone(user.phone_number)) + '</a></dd></div>' +
-                    '<div><dt>ID number</dt><dd><span class="hash" title="' + escapeHtml(hash) + '">' + escapeHtml(shortHash) + '</span> <span class="muted">hashed</span></dd></div>' +
+                    '<div><dt>Mobile</dt><dd class="reveal">' + renderPhone(user) + '</dd></div>' +
+                    '<div><dt>ID number</dt><dd class="reveal">' + renderIdNumber(user) + '</dd></div>' +
                     '<div><dt>Status</dt><dd><span class="status status-' + (archived ? 'archived' : (active ? 'active' : 'inactive')) + '">' + escapeHtml(statusText) + '</span></dd></div>' +
                     (user.updated_at ? '<div><dt>Last updated</dt><dd>' + escapeHtml(formatDateLong(user.updated_at)) + (user.editedby ? ' <span class="muted">by ' + escapeHtml(user.editedby) + '</span>' : '') + '</dd></div>' : '') +
                 '</dl>' +
@@ -216,6 +217,43 @@
             '</article>';
     }
 
+    function revealedValue(user, field) {
+        const value = state.revealed[user.id + ':' + field];
+        return value === undefined ? null : value;
+    }
+
+    function revealButton(field, label) {
+        return '<button type="button" class="btn btn-ghost btn-small" data-action="reveal" data-field="' + field + '">' + label + '</button>';
+    }
+
+    function hideButton(field) {
+        return '<button type="button" class="btn btn-ghost btn-small" data-action="hide" data-field="' + field + '">Hide</button>';
+    }
+
+    function renderPhone(user) {
+        const phone = revealedValue(user, 'phone');
+
+        if (phone !== null) {
+            return '<a href="tel:' + escapeHtml(phone.replace(/\s+/g, '')) + '">' + escapeHtml(formatPhone(phone)) + '</a>' + hideButton('phone');
+        }
+
+        return '<span class="masked">' + escapeHtml(user.phone_number) + '</span>' + revealButton('phone', 'Show number');
+    }
+
+    function renderIdNumber(user) {
+        const idNumber = revealedValue(user, 'id');
+
+        if (idNumber !== null) {
+            return '<span class="masked">' + escapeHtml(idNumber) + '</span>' + hideButton('id');
+        }
+
+        if (!user.id_number_available) {
+            return '<span class="muted">Not on file</span>';
+        }
+
+        return '<span class="masked">*************</span>' + revealButton('id', 'Show ID number');
+    }
+
     function renderEditForm(user) {
         detail.innerHTML =
             '<form class="form entry-edit" id="edit-form" novalidate>' +
@@ -229,7 +267,12 @@
                 '</div>' +
                 '<div class="form-row">' +
                     field('email', 'Email', user.email, 'email') +
-                    field('phone_number', 'Mobile number', formatPhone(user.phone_number), 'tel') +
+                    '<div class="field">' +
+                        '<label for="edit-phone_number">New mobile number</label>' +
+                        '<input id="edit-phone_number" name="phone_number" type="tel" inputmode="tel" autocomplete="off" placeholder="' + escapeHtml(user.phone_number) + '">' +
+                        '<p class="field-hint">Leave blank to keep the number on file.</p>' +
+                        '<p class="field-error" data-error-for="phone_number"></p>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="field">' +
                     '<label for="edit-id_number">New ID number</label>' +
@@ -316,6 +359,7 @@
 
         if (action === 'back') {
             state.selectedId = null;
+            state.revealed = {};
             render();
             return;
         }
@@ -324,8 +368,22 @@
             return;
         }
 
+        if (action === 'reveal') {
+            openRevealDialog(user, button.dataset.field);
+            return;
+        }
+
+        if (action === 'hide') {
+            const field = button.dataset.field;
+            delete state.revealed[user.id + ':' + field];
+            renderDetail();
+            focusRevealControl(field);
+            return;
+        }
+
         if (action === 'edit') {
             state.editing = true;
+            state.revealed = {};
             renderDetail();
             return;
         }
@@ -362,6 +420,10 @@
 
         if (!row) {
             return;
+        }
+
+        if (String(state.selectedId) !== String(row.dataset.id)) {
+            state.revealed = {};
         }
 
         state.selectedId = row.dataset.id;
@@ -460,6 +522,138 @@
     listEmpty.addEventListener('click', function (event) {
         if (event.target.closest('[data-action="clear-search"]')) {
             clearSearch();
+        }
+    });
+
+    // ---------- Reveal phone / ID behind REVEAL_PASSWORD ----------
+
+    const revealDialog = document.getElementById('reveal-dialog');
+    const revealForm = document.getElementById('reveal-form');
+    const revealPassword = document.getElementById('reveal-password');
+    const revealError = document.getElementById('reveal-error');
+    const revealSubmit = document.getElementById('reveal-submit');
+    const revealLabels = { phone: 'mobile number', id: 'ID number' };
+
+    function focusRevealControl(field) {
+        const control = detail.querySelector('[data-field="' + field + '"]');
+
+        if (control) {
+            control.focus();
+        }
+    }
+
+    function setRevealError(message) {
+        revealError.textContent = message || '';
+
+        if (message) {
+            revealPassword.setAttribute('aria-invalid', 'true');
+        } else {
+            revealPassword.removeAttribute('aria-invalid');
+        }
+    }
+
+    function openRevealDialog(user, field) {
+        state.pendingReveal = { userId: user.id, field: field };
+        document.getElementById('reveal-message').textContent =
+            'Enter the password to show ' + user.name + '’s ' + revealLabels[field] + '.';
+        revealPassword.value = '';
+        setRevealError('');
+        revealSubmit.disabled = false;
+
+        if (typeof revealDialog.showModal !== 'function') {
+            const password = window.prompt('Password');
+
+            if (password) {
+                submitReveal(password);
+            }
+            return;
+        }
+
+        revealDialog.showModal();
+        revealPassword.focus();
+    }
+
+    async function submitReveal(password) {
+        const pending = state.pendingReveal;
+
+        if (!pending) {
+            return;
+        }
+
+        const usingDialog = revealDialog.open;
+
+        if (usingDialog) {
+            setButtonBusy(revealSubmit, true, 'Checking…');
+        }
+
+        const result = await revealUserField(pending.userId, pending.field, password);
+
+        if (usingDialog) {
+            setButtonBusy(revealSubmit, false);
+        }
+
+        if (result.code === 200) {
+            state.revealed[pending.userId + ':' + pending.field] = result.value;
+            state.pendingReveal = null;
+
+            if (usingDialog) {
+                revealDialog.close();
+            }
+
+            if (String(state.selectedId) === String(pending.userId) && !state.editing) {
+                renderDetail();
+                focusRevealControl(pending.field);
+            }
+            return;
+        }
+
+        let message = result.message || 'That didn’t work. Try again.';
+
+        if (result.code === 401 && result.remaining !== undefined) {
+            message = 'Incorrect password. ' + result.remaining + (Number(result.remaining) === 1 ? ' attempt' : ' attempts') + ' left.';
+        }
+
+        if (!usingDialog) {
+            showToast(message, 'danger');
+            return;
+        }
+
+        setRevealError(message);
+        revealPassword.value = '';
+
+        if (result.code === 429) {
+            revealSubmit.disabled = true;
+            return;
+        }
+
+        revealPassword.focus();
+    }
+
+    revealForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const password = revealPassword.value;
+
+        if (password === '') {
+            setRevealError('Enter the password.');
+            revealPassword.focus();
+            return;
+        }
+
+        submitReveal(password);
+    });
+
+    document.getElementById('reveal-cancel').addEventListener('click', function () {
+        revealDialog.close();
+    });
+
+    revealDialog.addEventListener('close', function () {
+        const pending = state.pendingReveal;
+        revealPassword.value = '';
+        setRevealError('');
+        state.pendingReveal = null;
+
+        if (pending && String(state.selectedId) === String(pending.userId)) {
+            focusRevealControl(pending.field);
         }
     });
 
