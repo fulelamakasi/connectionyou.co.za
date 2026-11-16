@@ -60,11 +60,6 @@ mysql -u root -p < database/2_tables.sql
 mysql -u root -p < database/3_sql_user.sql
 mysql -u root -p < database/4_permissions_privileges.sql
 mysql -u root -p < database/5_seeder.sql
-```
-
-Upgrading an existing database from release 2.0.0? Run the migration once:
-
-```bash
 mysql -u root -p < database/6_add_id_number_encrypted.sql
 ```
 
