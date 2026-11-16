@@ -1,28 +1,6 @@
 <?php
     require_once __DIR__ . '/config/bootstrap.php';
-
-    $dbHost    = getenv('DB_HOST') ?: 'localhost';
-    $dbPort    = getenv('DB_PORT') ?: '3306';
-    $dbName    = getenv('DB_NAME') ?: 'connectionyou';
-    $dbUser    = getenv('DB_USER') ?: 'connector_user';
-    $dbPass    = getenv('DB_PASS') ?: '12345678';
-    $dbCharset = getenv('DB_CHARSET') ?: 'utf8mb4';
-
-    $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset={$dbCharset}";
-
-    $options = [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES   => false,
-    ];
-
-
-    try {
-        $pdo = new PDO($dsn, $dbUser, $dbPass, $options);
-    } catch (\PDOException $e) {
-        error_log("Database connection failed: " . $e->getMessage());
-        exit("Database connection failed. Please try again later.".  $e->getMessage());
-    }
+    require_once __DIR__ . '/Connection.php';
 
     function getSelectQuery($whereClause, $whereClauseColumn = '', $whereClauseValue = '', $limit = 1000)
     {
@@ -477,29 +455,37 @@
         return false;
     }
 
-    function setUserLog($request_data, $response_data, $request_method, $response_code, $endpoint, $request_ip)
+    function setUserLog($request_data, $response_data, $request_method, $response_code, $endpoint, $request_ip, $edited_by)
     {
         global $pdo;
-        $sql = "INSERT INTO `connectionyou`.`user_logs`(`request_data`, `response_data`, `request_method`, `response_code`, `endpoint`, `request_ip`) 
-                VALUES (:request_data, :response_data, :request_method, :response_code, :endpoint, :request_ip)";
+        $sql = "INSERT INTO `connectionyou`.`user_logs`(`request_data`, `response_data`, `request_method`, `response_code`, `endpoint`, `request_ip`, `editedby`) 
+                VALUES (:request_data, :response_data, :request_method, :response_code, :endpoint, :request_ip, :edited_by)";
 
         $stmt = $pdo->prepare($sql);
 
-        return $stmt->execute([
-            ':request_data'   => json_encode($request_data),
-            ':response_data'  => json_encode($response_data),
+        $stmt->execute([
+            ':request_data'   => $request_data,
+            ':response_data'  => $response_data,
             ':request_method' => $request_method,
             ':response_code'  => (int)$response_code,
             ':endpoint'       => $endpoint,
             ':request_ip'     => $request_ip,
+            ':edited_by'      => $edited_by,
         ]);
+
+        if ($stmt->rowCount() > 0) {
+            return $pdo->lastInsertId();
+        }
+
+        return false;
     }
 
-    function getFailedAttemptCount($endpoint, $request_ip, $minutes)
+    function getFailedAttemptsByIp($endpoint, $request_ip, $minutes = 15)
     {
         global $pdo;
-        $sql = "SELECT COUNT(*) AS `attempts`
-                FROM `connectionyou`.`user_logs`
+        $sql = "SELECT 
+                    COUNT(*) AS `attempts`
+                FROM `connectionyou`.`user_logs` 
                 WHERE `endpoint` = :endpoint
                     AND `request_ip` = :request_ip
                     AND `response_code` = 401
@@ -511,5 +497,8 @@
         $stmt->bindValue(':minutes', (int)$minutes, PDO::PARAM_INT);
         $stmt->execute();
 
-        return (int)$stmt->fetchColumn();
+        $row = $stmt->fetch();
+
+        return $row ? (int)$row['attempts'] : 0;
     }
+
