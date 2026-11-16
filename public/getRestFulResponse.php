@@ -15,7 +15,7 @@
                 'userByName' => NULL,
                 'getActive' => NULL,
                 'getAllUsersByDate' => NULL,
-                'revealUser' => NULL,
+                'revealUserField' => NULL,
     ];
 
     if(empty($type)){
@@ -32,7 +32,7 @@
                 'getAllUsers' => '',
                 'getAllUsersDeleted' => '',
                 'getAllUsersNonDeleted' => '',
-                'revealUser' => 'value (user id) is required, field=phone|id, X-Reveal-Password header',
+                'revealUserField' => 'value (encrypted request) and iv are required',
             ]
         ]);
         exit;
@@ -50,8 +50,8 @@
         exit;
     }
 
-    if ($type === 'revealUser') {
-        revealUserField((int)$value, isset($_REQUEST['field']) ? trim($_REQUEST['field']) : '');
+    if ($type === 'revealUserField') {
+        echo json_encode(revealUserField($value, isset($_REQUEST['iv']) ? $_REQUEST['iv'] : ''));
         exit;
     }
 
@@ -97,11 +97,11 @@
         $data[] = ['id' => $user['id'], 'email' => $user['email'],
                         'first_name' => $user['first_name'], 'last_name' => $user['last_name'],
                         'name' => $user['name'], 'phone_number' => maskPhoneNumber($user['phone_number']),
+                        'has_id_number' => !empty($user['id_number_encrypted']),
                         'message' => $user['message'], 'is_active' => $user['is_active'],
                         'created_at' => $user['created_at'], 'updated_at' => $user['updated_at'],
                         'editedby' => $user['editedby'], 'id_number_hash' => $user['id_number_hash'],
-                        'deleted_at' => $user['deleted_at'],
-                        'id_number_available' => !empty($user['id_number_encrypted']),];
+                        'deleted_at' => $user['deleted_at'],];
     }
 
     echo json_encode(['data' => ecryptData(array_values($data)), 'message' => '', 'code' => '200']);
@@ -117,6 +117,7 @@
                             'name' => '',
                             'phone_number' => '',
                             'id_number_hash' => '',
+                            'has_id_number' => false,
                             'message' => '',
                             'is_active' => 0,
                             'created_at' => '',
@@ -134,63 +135,114 @@
                 'getAllUsers' => ['request' => ['?query=' => ''], $responseArray],
                 'getAllUsersDeleted' => ['request' => ['?query=' => ''], $responseArray],
                 'getAllUsersNonDeleted' => ['request' => ['?query=' => ''], $responseArray],
+                'revealUserField' => [
+                    'request' => [
+                        '?query=' => 'ciphertext of {user_id, field: phone_number|id_number, password, timestamp}',
+                        '&iv=' => 'iv',
+                    ],
+                    ['response' => ['ciphertext of' => ['user_id' => 0, 'field' => '', 'value' => '']]],
+                ],
             ];
     }
 
-    function revealUserField($user_id, $field)
+    function revealUserField($ciphertext, $iv)
     {
-        $endpoint = 'revealUser';
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-        $maxAttempts = 5;
-        $windowMinutes = 15;
-        $logRequest = ['user_id' => $user_id, 'field' => $field];
+        $endpoint = 'revealUserField';
+        $request_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $revealableFields = ['phone_number', 'id_number'];
+        $maxFailedAttempts = 5;
+        $lockoutMinutes = 15;
+        $requestLifetimeSeconds = 300;
 
-        if (!in_array($field, ['phone', 'id'], true)) {
-            echo json_encode(['data' => NULL, 'message' => 'Field must be phone or id.', 'code' => '400']);
-            return;
+        if (empty($ciphertext) || empty($iv) || strlen((string)base64_decode($iv, true)) !== 16) {
+            return ['data' => NULL, 'message' => 'Request data could not be read.', 'code' => '400'];
         }
 
-        $expected = ($_ENV['REVEAL_PASSWORD'] ?: '');
+        $request = decryptData($ciphertext, $iv);
 
-        if ($expected === '') {
-            echo json_encode(['data' => NULL, 'message' => 'REVEAL_PASSWORD is not set on the server.', 'code' => '503']);
-            return;
+        if (!is_array($request)) {
+            return ['data' => NULL, 'message' => 'Request data could not be read.', 'code' => '400'];
         }
 
-        $failures = getFailedAttemptCount($endpoint, $ip, $windowMinutes);
+        $user_id = (int)($request['user_id'] ?? 0);
+        $field = (string)($request['field'] ?? '');
+        $password = (string)($request['password'] ?? '');
+        $timestamp = (int)($request['timestamp'] ?? 0);
 
-        if ($failures >= $maxAttempts) {
-            echo json_encode(['data' => NULL, 'message' => "Too many incorrect passwords. Try again in $windowMinutes minutes.", 'code' => '429']);
-            return;
+        if (!in_array($field, $revealableFields, true)) {
+            return ['data' => NULL, 'message' => 'That field can not be shown.', 'code' => '400'];
         }
 
-        $provided = rawurldecode(($_SERVER['HTTP_X_REVEAL_PASSWORD'] ?? ''));
+        // stops a logged GET url from being replayed later
+        if (abs(time() - $timestamp) > $requestLifetimeSeconds) {
+            return ['data' => NULL, 'message' => 'Request has expired. Check your device clock and try again.', 'code' => '400'];
+        }
 
-        if ($provided === '' || !hash_equals($expected, $provided)) {
-            $remaining = max(0, $maxAttempts - $failures - 1);
-            $response = ['data' => NULL, 'message' => 'Incorrect password.', 'code' => '401', 'remaining' => $remaining];
-            setUserLog($logRequest, $response, 'GET', 401, $endpoint, $ip);
-            echo json_encode($response);
-            return;
+        if (!isRevealPasswordConfigured()) {
+            return ['data' => NULL, 'message' => 'Showing protected details is not set up on the server (REVEAL_PASSWORD).', 'code' => '503'];
+        }
+
+        if (getRevealFailedAttempts($endpoint, $request_ip, $lockoutMinutes) >= $maxFailedAttempts) {
+            logRevealAttempt($endpoint, $user_id, $field, '429', $request_ip);
+            return ['data' => NULL, 'message' => "Too many incorrect passwords. Try again in $lockoutMinutes minutes.", 'code' => '429'];
+        }
+
+        if (!verifyRevealPassword($password)) {
+            logRevealAttempt($endpoint, $user_id, $field, '401', $request_ip);
+            return ['data' => NULL, 'message' => 'Incorrect password.', 'code' => '401'];
         }
 
         $userArray = getUserById($user_id);
 
         if (!$userArray) {
-            echo json_encode(['data' => NULL, 'message' => 'Invalid User Id.', 'code' => '404']);
-            return;
+            return ['data' => NULL, 'message' => 'Invalid User Id.', 'code' => '404'];
         }
 
         $user = $userArray[0];
-        $value = $field === 'phone' ? $user['phone_number'] : decryptAtRest($user['id_number_encrypted'] ?? null);
+        $plaintext = $user['phone_number'];
 
-        if ($value === null || $value === '') {
-            setUserLog($logRequest, ['code' => 404], 'GET', 404, $endpoint, $ip);
-            echo json_encode(['data' => NULL, 'message' => 'No readable ID number on file for this entry. Edit the entry and re-enter the ID to store it.', 'code' => '404']);
-            return;
+        if ($field === 'id_number') {
+            if (empty($user['id_number_encrypted'])) {
+                return ['data' => NULL, 'message' => 'No ID number on file that can be shown for this entry.', 'code' => '404'];
+            }
+
+            $plaintext = decryptIdNumber($user['id_number_encrypted']);
+
+            if ($plaintext === false || $plaintext === NULL) {
+                return ['data' => NULL, 'message' => 'ID number could not be decrypted. Check ENCRYPTION_KEY.', 'code' => '500'];
+            }
         }
 
-        setUserLog($logRequest, ['code' => 200], 'GET', 200, $endpoint, $ip);
+        logRevealAttempt($endpoint, $user_id, $field, '200', $request_ip);
 
-        echo json_encode(['data' => ecryptData(['user_id' => $user_id, 'field' => $field, 'value' => $value]), 'message' => '', 'code' => '200']);
+        return ['data' => ecryptData(['user_id' => $user_id, 'field' => $field, 'value' => $plaintext]), 'message' => '', 'code' => '200'];
     }
+
+    function logRevealAttempt($endpoint, $user_id, $field, $code, $request_ip)
+    {
+        try {
+            setUserLog(
+                json_encode(['user_id' => $user_id, 'field' => $field]),
+                json_encode(['code' => (int)$code]),
+                'GET',
+                $code,
+                $endpoint,
+                $request_ip,
+                $request_ip
+            );
+        } catch (\PDOException $e) {
+            error_log('Could not write reveal log: ' . $e->getMessage());
+        }
+    }
+
+    function getRevealFailedAttempts($endpoint, $request_ip, $minutes)
+    {
+        try {
+            return getFailedAttemptsByIp($endpoint, $request_ip, $minutes);
+        } catch (\PDOException $e) {
+            error_log('Could not read reveal log: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+
