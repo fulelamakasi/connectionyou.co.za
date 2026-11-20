@@ -2,7 +2,9 @@ name: connectionyou
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      target: app
     image: connectionyou:2.1.0
     restart: unless-stopped
     env_file: .env

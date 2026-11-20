@@ -1,0 +1,35 @@
+# Runs the PHPUnit suite against a throwaway MySQL, no .env needed:
+#   docker compose -f docker-compose.test.yml run --rm tests
+#   docker compose -f docker-compose.test.yml down     # clean up afterwards
+name: connectionyou-test
+
+services:
+  tests:
+    build:
+      context: .
+      target: test
+    environment:
+      DB_HOST: test-db
+      DB_PORT: "3306"
+      DB_NAME: connectionyou_test
+      DB_USER: connector_test
+      DB_PASS: test1234
+    depends_on:
+      test-db:
+        condition: service_healthy
+
+  test-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: test-root
+      TZ: Africa/Johannesburg
+    volumes:
+      - ./tests/database/test_user.sql:/docker-entrypoint-initdb.d/test_user.sql:ro
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -ptest-root --silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 20s

@@ -1,5 +1,6 @@
 # connectionyou.co.za - PHP 8.3 + Apache
-FROM php:8.3-apache
+# Stages: base (shared) -> test (PHPUnit, used by docker-compose.test.yml) -> app (default, deployed)
+FROM php:8.3-apache AS base
 
 # pdo_mysql is the only extension missing from the base image (openssl and mbstring are built in)
 RUN docker-php-ext-install pdo_mysql \
@@ -19,6 +20,32 @@ COPY --chown=root:www-data config/bootstrap.php ./config/
 COPY --chown=root:www-data public/ ./public/
 RUN find /var/www/html -type d -exec chmod 750 {} + \
     && find /var/www/html -type f -exec chmod 640 {} +
+
+
+# ---------- test: same PHP build plus Composer, PHPUnit and the test suite ----------
+FROM base AS test
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /app
+COPY composer.json composer.lock* ./
+RUN composer install --no-interaction --no-progress --prefer-dist
+
+COPY Database.php ./
+COPY config/bootstrap.php ./config/
+COPY public/ ./public/
+COPY database/2_tables.sql ./database/
+COPY tests/ ./tests/
+COPY phpunit.xml.dist ./
+
+CMD ["vendor/bin/phpunit"]
+
+
+# ---------- app: what runs in production (default build target) ----------
+FROM base AS app
 
 EXPOSE 80
 

@@ -38,7 +38,8 @@
         exit;
     }
 
-    if (array_key_exists($type, $isQueryRequiredArray) && empty($value)) {
+    // not empty(): getActive needs to accept '0'
+    if (array_key_exists($type, $isQueryRequiredArray) && trim((string)$value) === '') {
         // not encrypting
         echo json_encode("Please note value is required for ($type)!!!");
         exit;
@@ -69,7 +70,7 @@
             $users = getUserByName($value, $limit);
             break;
         case 'userByPhoneNumber':
-            $users = getUserByPhoneNumber($value, $limit);
+            $users = getUserByPhoneNumber(validateSAMobile($value) ?: $value, $limit);
             break;
         case 'getActive':
             $users = getActiveUsers($value, $limit);
@@ -218,6 +219,7 @@
         return ['data' => ecryptData(['user_id' => $user_id, 'field' => $field, 'value' => $plaintext]), 'message' => '', 'code' => '200'];
     }
 
+    // audit trail + rate limiting, never stores the password or the revealed value
     function logRevealAttempt($endpoint, $user_id, $field, $code, $request_ip)
     {
         try {

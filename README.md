@@ -22,7 +22,7 @@ git clone https://github.com/fulelamakasi/connectionyou.co.za.git
 #or SSH
 git clone git@github.com:fulelamakasi/connectionyou.co.za.git
 ```
-#Current Application tag release/4.0.0
+#Current Application tag release/2.1.0
 
 ### 2. Environment
 
@@ -60,7 +60,13 @@ mysql -u root -p < database/2_tables.sql
 mysql -u root -p < database/3_sql_user.sql
 mysql -u root -p < database/4_permissions_privileges.sql
 mysql -u root -p < database/5_seeder.sql
+```
+
+Upgrading an existing database from release 4.0.0? Run the migration once:
+
+```bash
 mysql -u root -p < database/6_add_id_number_encrypted.sql
+mysql -u root -p < database/7_normalise_phone_numbers.sql
 ```
 
 The app user gets `SELECT, INSERT, UPDATE` on `users` and `user_logs` only. Archiving is a soft delete (`deleted_at`), so `DELETE` is never needed.
@@ -68,7 +74,7 @@ The app user gets `SELECT, INSERT, UPDATE` on `users` and `user_logs` only. Arch
 Seeded rows carry pre-made ID hashes. They display fine, but because the original IDs aren't known they can't be matched by the duplicate-ID check. New enquiries are hashed with `hashIdNumber()` using your `APP_KEY`.
 
 
-### 4. Serve App or Move to #8 docker implementation alternative
+### 4. Serve App
 ``` bash
 php -S localhost:8080 -t public
 ```
@@ -95,7 +101,39 @@ You can now start testing the application
 
 
 
-### 8. Docker
+## Tests
+
+PHPUnit tests for both endpoints, run over real HTTP against PHP's built-in server and a separate `connectionyou_test` database:
+
+| Suite | Covers |
+|---|---|
+| `tests/Unit/BootstrapTest.php` | validators, phone masking, AES envelope, ID encryption and hashing, reveal password |
+| `tests/Feature/GetRestFulResponseTest.php` | every GET type, encrypted responses, masking, not found, bound parameters |
+| `tests/Feature/RevealUserFieldTest.php` | `revealUserField`: password, lockout, expiry, allowed fields, malformed requests, audit log |
+| `tests/Feature/RevealPasswordConfigTest.php` | `REVEAL_PASSWORD` empty and `password_hash()` values |
+| `tests/Feature/ProcessRestFulResponseTest.php` | every POST function, validation, duplicates, update conflicts, status, archive and restore |
+
+### Run with Docker (no PHP or MySQL needed on the host)
+
+```bash
+docker compose -f docker-compose.test.yml run --rm tests
+docker compose -f docker-compose.test.yml down
+```
+
+### Run locally
+
+```bash
+composer install                                  # installs PHPUnit
+mysql -u root -p < tests/database/test_user.sql   # once: connectionyou_test + connector_test user
+composer test                                     # or: vendor/bin/phpunit
+composer test:unit                                # unit tests only, no database needed
+```
+
+The database settings are in `phpunit.xml.dist`. To change them, copy it to `phpunit.xml` (git-ignored) or export `DB_HOST`, `DB_USER` and so on in your shell. The suite refuses to run unless `DB_NAME` ends in `_test`, because it drops and recreates its tables. The test keys in `phpunit.xml.dist` are for tests only: never reuse them in `.env`.
+
+Commit `composer.lock` after the first `composer install` so every machine gets the same PHPUnit version.
+
+## Docker
 
 Runs the app on PHP 8.3 + Apache and MySQL 8.4. No PHP or MySQL needed on the host.
 

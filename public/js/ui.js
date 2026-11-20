@@ -161,3 +161,93 @@ function setButtonBusy(button, busy, busyLabel) {
         button.removeAttribute('aria-busy');
     }
 }
+
+/**
+ * Asks for the reveal password. verify(password) must resolve { ok: true, ... } or
+ * { ok: false, message }. The dialog stays open on a wrong password so it can be retried.
+ * Resolves the verify() result, or null if cancelled.
+ */
+function promptForPassword(title, message, verify) {
+    const dialog = document.getElementById('password-dialog');
+
+    if (!dialog || typeof dialog.showModal !== 'function') {
+        const password = window.prompt(message);
+
+        if (!password) {
+            return Promise.resolve(null);
+        }
+
+        return verify(password).then(function (result) {
+            if (result.ok) {
+                return result;
+            }
+
+            showToast(result.message || 'That didn’t work. Try again.', 'danger');
+            return null;
+        });
+    }
+
+    const form = document.getElementById('password-form');
+    const input = document.getElementById('password-input');
+    const error = document.getElementById('password-error');
+    const submit = document.getElementById('password-submit');
+    const cancel = document.getElementById('password-cancel');
+
+    document.getElementById('password-title').textContent = title;
+    document.getElementById('password-message').textContent = message;
+    input.value = '';
+    input.removeAttribute('aria-invalid');
+    error.textContent = '';
+
+    return new Promise(function (resolve) {
+        let outcome = null;
+
+        async function onSubmit(event) {
+            event.preventDefault();
+
+            if (submit.disabled) {
+                return;
+            }
+
+            if (input.value === '') {
+                error.textContent = 'Enter the password.';
+                input.setAttribute('aria-invalid', 'true');
+                input.focus();
+                return;
+            }
+
+            setButtonBusy(submit, true, 'Checking…');
+            const result = await verify(input.value);
+            setButtonBusy(submit, false);
+
+            if (result.ok) {
+                outcome = result;
+                dialog.close();
+                return;
+            }
+
+            error.textContent = result.message || 'That didn’t work. Try again.';
+            input.setAttribute('aria-invalid', 'true');
+            input.select();
+            input.focus();
+        }
+
+        function onCancel() {
+            dialog.close();
+        }
+
+        function onClose() {
+            form.removeEventListener('submit', onSubmit);
+            cancel.removeEventListener('click', onCancel);
+            dialog.removeEventListener('close', onClose);
+            input.value = '';
+            resolve(outcome);
+        }
+
+        form.addEventListener('submit', onSubmit);
+        cancel.addEventListener('click', onCancel);
+        dialog.addEventListener('close', onClose);
+        dialog.showModal();
+        input.focus();
+    });
+}
