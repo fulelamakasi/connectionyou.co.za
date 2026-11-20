@@ -5,3 +5,8 @@
 !/logs/empty
 
 .env
+
+/vendor/
+phpunit.xml
+.phpunit.cache/
+.phpunit.result.cache

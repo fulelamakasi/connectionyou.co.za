@@ -63,7 +63,7 @@
         $pattern = '/^(?:\+?27|0)([1-8][0-9]\d{7})$/';
 
         if (preg_match($pattern, $cleaned, $matches)) {
-            return '+27 ' . $matches[1];
+            return '+27' . $matches[1];
         }
 
         return false;
@@ -234,7 +234,8 @@
         $secretKey = getenv('ENCRYPTION_KEY');
         
         if (!$secretKey) {
-            return "ENCRYPTION_KEY is not set in the environment.";
+            error_log('ENCRYPTION_KEY is not set in the environment.');
+            return false;
         }
 
         $decodedData = base64_decode($encryptedData);
@@ -257,3 +258,64 @@
 
         return json_decode($decryptedRaw, true);
     }
+
+    function encryptIdNumber($idNumber)
+    {
+        $secretKey = getenv('ENCRYPTION_KEY');
+
+        if (!$secretKey || trim((string)$idNumber) === '') {
+            return NULL;
+        }
+
+        $ivLength = openssl_cipher_iv_length('aes-256-cbc');
+        $iv = openssl_random_pseudo_bytes($ivLength);
+        $encryptedRaw = openssl_encrypt(json_encode(trim((string)$idNumber)), 'aes-256-cbc', $secretKey, OPENSSL_RAW_DATA, $iv);
+
+        if ($encryptedRaw === false) {
+            return NULL;
+        }
+
+        // IV is prepended so decryptIdNumber() can split it back off
+        return base64_encode($iv . $encryptedRaw);
+    }
+
+    // +27781234509 / +27 781234509 / 0781234509 => 078*****09
+    function maskPhoneNumber($phone_number)
+    {
+        $digits = preg_replace('/\D+/', '', (string)$phone_number);
+
+        if (strpos($digits, '27') === 0 && strlen($digits) === 11) {
+            $digits = '0' . substr($digits, 2);
+        }
+
+        $length = strlen($digits);
+
+        if ($length < 6) {
+            return str_repeat('*', $length);
+        }
+
+        return substr($digits, 0, 3) . str_repeat('*', $length - 5) . substr($digits, -2);
+    }
+
+    function isRevealPasswordConfigured()
+    {
+        return (string)(getenv('REVEAL_PASSWORD') ?: '') !== '';
+    }
+
+    // REVEAL_PASSWORD may be plaintext (default) or a password_hash() value ($2y$ / $argon2id$)
+    function verifyRevealPassword($password)
+    {
+        $configured = (string)(getenv('REVEAL_PASSWORD') ?: '');
+        $password = (string)$password;
+
+        if ($configured === '' || $password === '') {
+            return false;
+        }
+
+        if (preg_match('/^\$(2y|2a|2b|argon2i|argon2id)\$/', $configured)) {
+            return password_verify($password, $configured);
+        }
+
+        return hash_equals($configured, $password);
+    }
+

@@ -20,7 +20,7 @@
                     `deleted_at`,
                     `editedby`
                 FROM 
-                    `connectionyou`.`users` 
+                    `users` 
                 WHERE
                     $whereClause
                 LIMIT :limit";
@@ -48,7 +48,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `is_active` = :is_active
                 LIMIT :limit";
 
@@ -71,7 +71,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE DATE(`created_at`) = :created_at
                 LIMIT :limit";
 
@@ -94,7 +94,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `email` = :email
                 LIMIT :limit";
 
@@ -117,7 +117,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `id` = :id
                 LIMIT 1";
 
@@ -139,7 +139,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `id_number_hash` = :id_number_hash
                 LIMIT :limit";
 
@@ -162,7 +162,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `phone_number` = :phone_number
                 LIMIT :limit";
 
@@ -185,7 +185,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `name` = :name
                 LIMIT :limit";
 
@@ -208,7 +208,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 LIMIT :limit";
 
         $stmt = $pdo->prepare($sql);
@@ -229,7 +229,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `deleted_at` IS NULL
                 LIMIT :limit";
 
@@ -251,7 +251,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `deleted_at` IS NOT NULL
                 LIMIT :limit";
 
@@ -273,7 +273,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `first_name` = :first_name
                 LIMIT :limit";
 
@@ -296,7 +296,7 @@
         global $pdo;
         $sql = "SELECT 
                     *
-                FROM `connectionyou`.`users` 
+                FROM `users` 
                 WHERE `last_name` = :last_name
                 LIMIT :limit";
 
@@ -317,7 +317,7 @@
     function setPerformUserInsert($first_name, $last_name, $name, $phone_number, $id_number_hash, $id_number_encrypted, $email, $message, $edited_by)
     {
         global $pdo;
-        $sql = "INSERT INTO `connectionyou`.`users`(`email`, `first_name`, `last_name`, `name`, `phone_number`, `id_number_hash`, `id_number_encrypted`, `message`, `editedby`) 
+        $sql = "INSERT INTO `users`(`email`, `first_name`, `last_name`, `name`, `phone_number`, `id_number_hash`, `id_number_encrypted`, `message`, `editedby`) 
                 VALUES (:email, :first_name, :last_name, :name, :phone_number, :id_number_hash, :id_number_encrypted, :message, :edited_by)";
 
         $stmt = $pdo->prepare($sql);
@@ -344,7 +344,7 @@
     function setUpdateRecord($user_id, $first_name, $last_name, $name, $phone_number, $id_number_hash, $id_number_encrypted, $email, $message, $edited_by)
     {
         global $pdo;
-        $sql = "UPDATE `connectionyou`.`users` 
+        $sql = "UPDATE `users` 
                 SET 
                     `email` = :email,
                     `first_name` = :first_name,
@@ -388,7 +388,7 @@
             $active = 'Deactivated';
         }
 
-        $sql = "UPDATE `connectionyou`.`users` 
+        $sql = "UPDATE `users` 
                 SET 
                     `is_active` = :is_active,
                     `updated_at` = NOW(),
@@ -412,7 +412,7 @@
     function setUserArchived($user_id, $edited_by)
     {
         global $pdo;
-        $sql = "UPDATE `connectionyou`.`users` 
+        $sql = "UPDATE `users` 
                 SET 
                     `deleted_at` = NOW(),
                     `updated_at` = NOW(),
@@ -435,7 +435,7 @@
     function setUserUnArchived($user_id, $edited_by)
     {
         global $pdo;
-        $sql = "UPDATE `connectionyou`.`users` 
+        $sql = "UPDATE `users` 
                 SET 
                     `deleted_at` = NULL,
                     `updated_at` = NOW(),
@@ -458,7 +458,7 @@
     function setUserLog($request_data, $response_data, $request_method, $response_code, $endpoint, $request_ip, $edited_by)
     {
         global $pdo;
-        $sql = "INSERT INTO `connectionyou`.`user_logs`(`request_data`, `response_data`, `request_method`, `response_code`, `endpoint`, `request_ip`, `editedby`) 
+        $sql = "INSERT INTO `user_logs`(`request_data`, `response_data`, `request_method`, `response_code`, `endpoint`, `request_ip`, `editedby`) 
                 VALUES (:request_data, :response_data, :request_method, :response_code, :endpoint, :request_ip, :edited_by)";
 
         $stmt = $pdo->prepare($sql);
@@ -485,7 +485,7 @@
         global $pdo;
         $sql = "SELECT 
                     COUNT(*) AS `attempts`
-                FROM `connectionyou`.`user_logs` 
+                FROM `user_logs` 
                 WHERE `endpoint` = :endpoint
                     AND `request_ip` = :request_ip
                     AND `response_code` = 401

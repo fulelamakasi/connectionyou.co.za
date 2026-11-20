@@ -10,10 +10,13 @@
 
     $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset={$dbCharset}";
 
+
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
+        // rowCount() = matched rows, so saving an unchanged record still reports success
+        PDO::MYSQL_ATTR_FOUND_ROWS   => true,
     ];
 
 

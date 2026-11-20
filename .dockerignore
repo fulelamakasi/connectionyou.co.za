@@ -4,9 +4,12 @@
 .env
 .env.*
 config/.env
-docker-compose.yml
+docker-compose*.yml
 Dockerfile
-database
+vendor
+phpunit.xml
+.phpunit.cache
+.phpunit.result.cache
 logs
 tmp
 *.md

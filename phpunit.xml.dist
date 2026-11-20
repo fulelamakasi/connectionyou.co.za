@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copy to phpunit.xml (git-ignored) to change values locally, or export the
+    variables in your shell / CI: <env> values here never override variables
+    that are already set.
+
+    DB_NAME must end in "_test". The suite drops and recreates its tables.
+-->
+<phpunit bootstrap="tests/bootstrap.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true">
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:dGVzdC1hcHAta2V5LW5vdC1mb3ItcHJvZHVjdGlvbiE="/>
+        <env name="ENCRYPTION_KEY" value="test-encryption-key-32-chars-ok!"/>
+        <env name="REVEAL_PASSWORD" value="test-reveal-password"/>
+
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="3306"/>
+        <env name="DB_NAME" value="connectionyou_test"/>
+        <env name="DB_USER" value="connector_test"/>
+        <env name="DB_PASS" value="test1234"/>
+    </php>
+</phpunit>
