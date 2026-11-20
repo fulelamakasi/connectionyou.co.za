@@ -22,7 +22,7 @@ git clone https://github.com/fulelamakasi/connectionyou.co.za.git
 #or SSH
 git clone git@github.com:fulelamakasi/connectionyou.co.za.git
 ```
-#Current Application tag release/2.1.0
+#Current Application tag release/5.0.0
 
 ### 2. Environment
 
@@ -60,12 +60,12 @@ mysql -u root -p < database/2_tables.sql
 mysql -u root -p < database/3_sql_user.sql
 mysql -u root -p < database/4_permissions_privileges.sql
 mysql -u root -p < database/5_seeder.sql
+mysql -u root -p < database/6_add_id_number_encrypted.sql
 ```
 
 Upgrading an existing database from release 4.0.0? Run the migration once:
 
 ```bash
-mysql -u root -p < database/6_add_id_number_encrypted.sql
 mysql -u root -p < database/7_normalise_phone_numbers.sql
 ```
 
@@ -74,7 +74,7 @@ The app user gets `SELECT, INSERT, UPDATE` on `users` and `user_logs` only. Arch
 Seeded rows carry pre-made ID hashes. They display fine, but because the original IDs aren't known they can't be matched by the duplicate-ID check. New enquiries are hashed with `hashIdNumber()` using your `APP_KEY`.
 
 
-### 4. Serve App
+### 4. Serve App or Move to #9 docker implementation alternative
 ``` bash
 php -S localhost:8080 -t public
 ```
@@ -101,7 +101,7 @@ You can now start testing the application
 
 
 
-## Tests
+## 8. Tests
 
 PHPUnit tests for both endpoints, run over real HTTP against PHP's built-in server and a separate `connectionyou_test` database:
 
@@ -133,7 +133,7 @@ The database settings are in `phpunit.xml.dist`. To change them, copy it to `php
 
 Commit `composer.lock` after the first `composer install` so every machine gets the same PHPUnit version.
 
-## Docker
+## 9. Docker
 
 Runs the app on PHP 8.3 + Apache and MySQL 8.4. No PHP or MySQL needed on the host.
 
